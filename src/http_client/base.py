@@ -1,6 +1,5 @@
-from time import sleep
-
 import requests
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 
 class HttpClient:
@@ -19,6 +18,10 @@ class HttpClient:
 
         return response.status_code == 200
 
+    @retry(
+        stop=stop_after_attempt(10),
+        wait=wait_exponential(multiplier=1, min=5, max=60)
+    )
     def market_chart(self, coin_id: str) -> dict:
         url = f'{self.BASE_URL}/coins/{coin_id}/market_chart'
         query_params = {
@@ -26,5 +29,6 @@ class HttpClient:
             'vs_currency': 'usd',
         }
         response = requests.get(url, params=query_params, headers=self.headers)
+        response.raise_for_status()
 
         return response.json()

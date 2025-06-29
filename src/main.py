@@ -1,14 +1,25 @@
+import logging
+
 import pandas as pd
+import requests.exceptions
 
 from src.config.settings import Settings
 from src.http_client.base import HttpClient
 
 
-def get_coingecko_data(api_key: str) -> dict:
-    http_client = HttpClient(api_key)
-    response = http_client.market_chart('bitcoin')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-    return response
+
+def get_coingecko_data(api_key: str) -> dict | None:
+    http_client = HttpClient(api_key)
+
+    try:
+        return http_client.market_chart('bitcoin')
+    except requests.exceptions.HTTPError as e:
+        logging.error(f'Get data failed! :(. {e}')
+        return None
+    except Exception as e:
+        logging.error(f'Catch error: {e}')
 
 
 def transform_data(data: dict) -> pd.DataFrame:
@@ -33,19 +44,28 @@ def transform_data(data: dict) -> pd.DataFrame:
 
 def save_data_to_files(data: pd.DataFrame) -> None:
     data.to_csv(
-        '../marekt_caps.csv',
+        '../files/market_chart.csv',
         index=True,
         index_label='datetime',
     )
-    data.to_parquet('../marekt_caps.parquet', index=True)
+    data.to_parquet('../files/market_chart.parquet', index=True)
 
 
 
 def main():
     settings = Settings()
     data = get_coingecko_data(settings.api_key)
+
+    if not data:
+        return
+
+    logging.info('Data got successfully!')
+
     transformed_data = transform_data(data)
+    logging.info('Data transformed!')
+
     save_data_to_files(transformed_data)
+    logging.info('Data saved!')
 
 
 if __name__ == '__main__':
