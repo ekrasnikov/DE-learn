@@ -164,3 +164,12 @@ poetry.toml
 
 # LSP config files
 pyrightconfig.json
+
+# idea
+.idea/
+
+# data
+data/
+
+# Jupyter
+*.ipynb

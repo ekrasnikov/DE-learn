@@ -1,7 +1,8 @@
 import logging
 
-import pandas as pd
-import requests.exceptions
+from requests.exceptions import HTTPError
+from pandas import DataFrame
+from pandas import to_datetime
 
 from config.settings import Settings, DATA_DIR
 from http_client.coingecko_client import CoingeckoClient
@@ -28,7 +29,7 @@ def get_coingecko_market_chart(api_key: str) -> dict | None:
 
     try:
         return client.fetch_market_chart('bitcoin', params)
-    except requests.exceptions.HTTPError as e:
+    except HTTPError as e:
         logging.error(f'Get data failed! :(. {e}')
         return None
     except Exception as e:
@@ -36,7 +37,7 @@ def get_coingecko_market_chart(api_key: str) -> dict | None:
         return None
 
 
-def transform_market_chart_to_df(data: dict) -> pd.DataFrame:
+def transform_market_chart_to_df(data: dict) -> DataFrame:
     """Трансформация полученных данных.
 
     Args:
@@ -46,19 +47,19 @@ def transform_market_chart_to_df(data: dict) -> pd.DataFrame:
         Возвращает DataFrame  обработанных данных
 
     """
-    df_prices = pd.DataFrame(data['prices'], columns=['datetime', 'price'])
-    df_caps = pd.DataFrame(data['market_caps'], columns=['datetime', 'cap'])
-    df_volumes = pd.DataFrame(data['total_volumes'], columns=['datetime', 'volume'])
+    df_prices = DataFrame(data['prices'], columns=['datetime', 'price'])
+    df_caps = DataFrame(data['market_caps'], columns=['datetime', 'cap'])
+    df_volumes = DataFrame(data['total_volumes'], columns=['datetime', 'volume'])
 
     df = df_prices.merge(df_caps, on='datetime').merge(df_volumes, on='datetime')
 
-    df['datetime'] = pd.to_datetime(df['datetime'], unit='ms')
-    df = df.set_index('datetime')
+    df['datetime'] = to_datetime(df['datetime'], unit='ms')
+    df.set_index('datetime', inplace=True)
 
     return df.round(3)
 
 
-def save_dataframe_to_csv(data: pd.DataFrame) -> None:
+def save_dataframe_to_csv(data: DataFrame) -> None:
     """Сохранение обработанных данных в csv файл.
 
 
@@ -73,7 +74,7 @@ def save_dataframe_to_csv(data: pd.DataFrame) -> None:
     )
 
 
-def save_dataframe_to_parquet(data: pd.DataFrame) -> None:
+def save_dataframe_to_parquet(data: DataFrame) -> None:
     """Сохранение обработанных данных в parquet файл.
 
 
@@ -82,7 +83,6 @@ def save_dataframe_to_parquet(data: pd.DataFrame) -> None:
 
     """
     data.to_parquet(DATA_DIR / 'market_chart.parquet', index=True)
-
 
 
 def main():
