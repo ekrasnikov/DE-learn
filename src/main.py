@@ -4,7 +4,7 @@ import pandas as pd
 import requests.exceptions
 
 from config.settings import Settings, DATA_DIR
-from http_client.base import HttpClient
+from http_client.coingecko_client import CoingeckoClient
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -17,10 +17,10 @@ def get_coingecko_data(api_key: str) -> dict | None:
         api_key - ключ api для авторизации в api coingecko
 
     """
-    http_client = HttpClient(api_key)
+    client = CoingeckoClient(api_key)
 
     try:
-        return http_client.market_chart('bitcoin')
+        return client.fetch_market_chart('bitcoin')
     except requests.exceptions.HTTPError as e:
         logging.error(f'Get data failed! :(. {e}')
         return None
@@ -54,7 +54,7 @@ def transform_data(data: dict) -> pd.DataFrame:
 
 
 
-def save_data_to_files(data: pd.DataFrame) -> None:
+def save_dataframe_to_csv(data: pd.DataFrame) -> None:
     """Сохранение обработанных данных в файл.
 
 
@@ -70,6 +70,18 @@ def save_data_to_files(data: pd.DataFrame) -> None:
         index=True,
         index_label='datetime',
     )
+
+
+def save_dataframe_to_parquet(data: pd.DataFrame) -> None:
+    """Сохранение обработанных данных в файл.
+
+
+    Attributes:
+        data - обработанные данные
+
+    """
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
     data.to_parquet(DATA_DIR / 'market_chart.parquet', index=True)
 
 
@@ -86,7 +98,8 @@ def main():
     transformed_data = transform_data(data)
     logging.info('Data transformed!')
 
-    save_data_to_files(transformed_data)
+    save_dataframe_to_csv(transformed_data)
+    save_dataframe_to_parquet(transformed_data)
     logging.info('Data saved!')
 
 

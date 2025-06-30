@@ -2,10 +2,9 @@ import requests
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 
-class HttpClient:
+class CoingeckoClient:
     """Класс для работы с api coingecko."""
     BASE_URL = 'https://api.coingecko.com/api/v3'
-    attempts = 0
 
     def __init__(self, api_key: str):
         self.headers = {
@@ -24,7 +23,7 @@ class HttpClient:
         stop=stop_after_attempt(10),
         wait=wait_exponential(multiplier=1, min=5, max=60)
     )
-    def market_chart(self, coin_id: str) -> dict:
+    def fetch_market_chart(self, coin_id: str) -> dict:
         """Получение иторических данных market_chart.
 
         Attributes:
