@@ -10,61 +10,62 @@ from http_client.coingecko_client import CoingeckoClient
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-def get_coingecko_data(api_key: str) -> dict | None:
+def get_coingecko_market_chart(api_key: str) -> dict | None:
     """Работа с получением данных.
 
-    Attributes:
+    Args:
         api_key - ключ api для авторизации в api coingecko
+
+    Returns:
+        Возвращает данные из coingecko api
 
     """
     client = CoingeckoClient(api_key)
+    params = {
+        'days': 1,
+        'vs_currency': 'usd',
+    }
 
     try:
-        return client.fetch_market_chart('bitcoin')
+        return client.fetch_market_chart('bitcoin', params)
     except requests.exceptions.HTTPError as e:
         logging.error(f'Get data failed! :(. {e}')
         return None
     except Exception as e:
         logging.error(f'Catch error: {e}')
+        return None
 
 
-def transform_data(data: dict) -> pd.DataFrame:
+def transform_market_chart_to_df(data: dict) -> pd.DataFrame:
     """Трансформация полученных данных.
 
-    Attributes:
+    Args:
         data - данные, которые нужно трасформировать
 
+    Returns:
+        Возвращает DataFrame  обработанных данных
+
     """
-    prices_data = pd.DataFrame(data['prices'], columns=['datetime', 'price'])
-    market_caps = pd.DataFrame(data['market_caps'], columns=['datetime', 'cap'])
-    total_volumes = pd.DataFrame(data['total_volumes'], columns=['datetime', 'volume'])
+    df_prices = pd.DataFrame(data['prices'], columns=['datetime', 'price'])
+    df_caps = pd.DataFrame(data['market_caps'], columns=['datetime', 'cap'])
+    df_volumes = pd.DataFrame(data['total_volumes'], columns=['datetime', 'volume'])
 
-    prices_data['datetime'] = pd.to_datetime(prices_data['datetime'], unit='ms')
-    market_caps['datetime'] = pd.to_datetime(market_caps['datetime'], unit='ms')
-    total_volumes['datetime'] = pd.to_datetime(total_volumes['datetime'], unit='ms')
+    df = df_prices.merge(df_caps, on='datetime').merge(df_volumes, on='datetime')
 
-    return pd.DataFrame(
-        index=[*prices_data['datetime']],
-        data={
-            'price': [*prices_data['price'].apply(lambda x: round(x, 3))],
-            'cap': [*market_caps['cap'].apply(lambda x: round(x, 3))],
-            'volume': [*total_volumes['volume'].apply(lambda x: round(x, 3))],
-        },
-    )
+    df['datetime'] = pd.to_datetime(df['datetime'], unit='ms')
+    df = df.set_index('datetime')
 
+    return df.round(3)
 
 
 def save_dataframe_to_csv(data: pd.DataFrame) -> None:
-    """Сохранение обработанных данных в файл.
+    """Сохранение обработанных данных в csv файл.
 
 
-    Attributes:
+    Args:
         data - обработанные данные
 
     """
-
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-
     data.to_csv(
         DATA_DIR / 'market_chart.csv',
         index=True,
@@ -73,31 +74,30 @@ def save_dataframe_to_csv(data: pd.DataFrame) -> None:
 
 
 def save_dataframe_to_parquet(data: pd.DataFrame) -> None:
-    """Сохранение обработанных данных в файл.
+    """Сохранение обработанных данных в parquet файл.
 
 
-    Attributes:
+    Args:
         data - обработанные данные
 
     """
-
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
     data.to_parquet(DATA_DIR / 'market_chart.parquet', index=True)
 
 
 
 def main():
     settings = Settings()
-    data = get_coingecko_data(settings.api_key)
+    data = get_coingecko_market_chart(settings.api_key)
 
     if not data:
         return
 
     logging.info('Data got successfully!')
 
-    transformed_data = transform_data(data)
+    transformed_data = transform_market_chart_to_df(data)
     logging.info('Data transformed!')
 
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
     save_dataframe_to_csv(transformed_data)
     save_dataframe_to_parquet(transformed_data)
     logging.info('Data saved!')
