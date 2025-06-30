@@ -3,6 +3,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 
 class HttpClient:
+    """Класс для работы с api coingecko."""
     BASE_URL = 'https://api.coingecko.com/api/v3'
     attempts = 0
 
@@ -13,6 +14,7 @@ class HttpClient:
 
 
     def ping(self) -> bool:
+        """Метод ping для проверки, что запросы летят правильно"""
         url = f'{self.BASE_URL}/ping'
         response = requests.get(url, headers=self.headers)
 
@@ -23,6 +25,18 @@ class HttpClient:
         wait=wait_exponential(multiplier=1, min=5, max=60)
     )
     def market_chart(self, coin_id: str) -> dict:
+        """Получение иторических данных market_chart.
+
+        Attributes:
+            coin_id - id криптовалюты, данные которой хотим получить
+
+        Return:
+            Данные от API в виде словаря.
+
+        Raises:
+            requests.exceptions.HTTPError: Если API возвращает ошибку после всех попыток.
+
+        """
         url = f'{self.BASE_URL}/coins/{coin_id}/market_chart'
         query_params = {
             'days': 1,
