@@ -92,7 +92,7 @@ def main():
     if not data:
         return
 
-    logging.info('Data got successfully!')
+    logging.info('API Data has been received successfully!')
 
     transformed_data = transform_market_chart_to_df(data)
     logging.info('Data transformed!')
