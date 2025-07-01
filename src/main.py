@@ -100,7 +100,7 @@ def main():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     save_dataframe_to_csv(transformed_data)
     save_dataframe_to_parquet(transformed_data)
-    logging.info('Data saved!')
+    logging.info('ETL pipeline finished. Data saved successfully.')
 
 
 if __name__ == '__main__':
