@@ -1,47 +1,51 @@
 # DE-learn
-Изучение Data Engineer
+A project for learning Data Engineering.
+This project creates a snapshot pipeline to save daily data...
 
 
-### Требования:
+## Tech Stack
+![Python](https://img.shields.io/badge/python-3.12-blue.svg?logo=python&logoColor=white)
+![Docker](https://img.shields.io/badge/docker-%232496ED.svg?logo=docker&logoColor=white)
+![Docker Compose](https://img.shields.io/badge/docker_compose-2496ED?logo=docker&logoColor=white)
+![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?logo=postgresql&logoColor=white)
+![Pandas](https://img.shields.io/badge/pandas-%23150458.svg?logo=pandas&logoColor=white)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-red)
 
-```
-python3.12
-```
 
-## Запуск проекта
+## Project Architecture 
+![Project Architecture ](docs/architecture.drawio.svg)
 
-### 1. Создаем виртуальное окружение
+
+## Getting Started
+
+### 1. Clone project
 ```sh
-python -m venv .venv
+  git clone https://github.com/jinjik19/DE-learn.git
 ```
 
-### 2. Запускаем виртуальное окружение
-```sh
-# Linux
-source .venv/bin/activate
+### 2. Environment Variables
+```
+# 1. Copy .env.example file
+cp .env.example .env
 
-# Windows
-
-.venv/Scripts/activate
+# 2. Open .env file and insert yours values
 ```
 
-### Установка пакетов
-
-```sh
-pip install -r requirements.txt
-```
-
-
-### Переменные окружения
-```aiignore
-1. Создать файл .env на основе .env.example
-2. Вставить нужные значения в переменные в .env файле
-```
-
-
-### Запуск скрипта
+### 3. Running the Application
 
 ```sh
-python src/main.py
+docker-compose up --build
+```
+
+## Usage
+```
+1. Connect to PostgreSQL DB by .env creds
+2. Run SQL script: `SELECT * FROM market_chart ORDER BY datetime DESC LIMIT 10;`
+```
+
+
+## Shutting Down
+```sh
+  docker-compose down
 ```
 
