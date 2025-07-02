@@ -1,10 +1,11 @@
 import logging
 
+from sqlalchemy import create_engine
 from requests.exceptions import HTTPError
 from pandas import DataFrame
 from pandas import to_datetime
 
-from config.settings import Settings, DATA_DIR
+from config.settings import Settings
 from http_client.coingecko_client import CoingeckoClient
 
 
@@ -54,35 +55,29 @@ def transform_market_chart_to_df(data: dict) -> DataFrame:
     df = df_prices.merge(df_caps, on='datetime').merge(df_volumes, on='datetime')
 
     df['datetime'] = to_datetime(df['datetime'], unit='ms')
-    df.set_index('datetime', inplace=True)
+    df.set_index('datetime')
+
+    logging.info('Data has been transformed successfully!')
 
     return df.round(3)
 
-
-def save_dataframe_to_csv(data: DataFrame) -> None:
-    """Сохранение обработанных данных в csv файл.
-
+def save_dataframe_to_db(df: DataFrame, db_url: str, table_name: str) -> None:
+    """Сохранение DataFrame в базу данных.
 
     Args:
-        data - обработанные данные
+        df - DataFrame, который нужно сохранить
+        db_url - URL базы данных
+        table_name - имя таблицы, в которую нужно сохранить данные
 
     """
-    data.to_csv(
-        DATA_DIR / 'market_chart.csv',
-        index=True,
-        index_label='datetime',
-    )
 
+    logging.info('Saving DataFrame to database...')
 
-def save_dataframe_to_parquet(data: DataFrame) -> None:
-    """Сохранение обработанных данных в parquet файл.
+    engine = create_engine(db_url)
+    df.to_sql(table_name, con=engine, if_exists='replace', index=True, index_label='datetime')
 
+    logging.info(f"Data successfully loaded to '{table_name}' table in PostgreSQL.")
 
-    Args:
-        data - обработанные данные
-
-    """
-    data.to_parquet(DATA_DIR / 'market_chart.parquet', index=True)
 
 
 def main():
@@ -95,12 +90,7 @@ def main():
     logging.info('API Data has been received successfully!')
 
     transformed_data = transform_market_chart_to_df(data)
-    logging.info('Data transformed!')
-
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    save_dataframe_to_csv(transformed_data)
-    save_dataframe_to_parquet(transformed_data)
-    logging.info('ETL pipeline finished. Data saved successfully to CSV and Parquet files.')
+    save_dataframe_to_db(transformed_data, str(settings.database_url), 'market_chart')
 
 
 if __name__ == '__main__':
