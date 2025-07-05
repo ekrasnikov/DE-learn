@@ -4,11 +4,18 @@ from airflow.models.dag import DAG
 from airflow.providers.docker.operators.docker import DockerOperator
 
 
+default_args = {
+  'owner': 'jinjik19',
+}
+
+
 with DAG(
   dag_id='market_data_etl',
   start_date=datetime(2025, 7, 4),
   schedule='@daily',
   catchup=False,
+  default_args=default_args,
+  tags=['data-learn', 'crypto'],
 ):
   environment={
       'API_KEY': '{{ var.value.api_key }}',
@@ -22,5 +29,5 @@ with DAG(
     docker_url='unix://var/run/docker.sock',
     environment=environment,
     command=['python', 'src/main.py', '{{ ds }}'],
-    auto_remove='success',
+    auto_remove='force',
   )

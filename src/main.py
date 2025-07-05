@@ -110,15 +110,13 @@ def run_from_cli() -> None:
         date_str = sys.argv[1]
 
         try:
-            to_datetime(date_str, format='%Y-%m-%d')
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+            formatted_execution_date = date_obj.strftime('%d-%m-%Y')
             logging.info(f'Date {date_str} is valid. Starting data processing...')
+            main(execution_date=formatted_execution_date)
         except ValueError:
             logging.error(f'Invalid date format: {date_str}. Please use "yyyy-mm-dd".')
             sys.exit(1)
-
-        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
-        formatted_execution_date = date_obj.strftime('%d-%m-%Y')
-        main(execution_date=formatted_execution_date)
 
     else:
         logging.error('Execution date is required as a command line argument. Enter date in format "yyyy-mm-dd".')
