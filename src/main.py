@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 import sys
 
@@ -105,20 +106,22 @@ def main(execution_date: str, currency: str = 'usd') -> None:
 
 def run_from_cli() -> None:
     """Запуск скрипта из командной строки."""
-    if len(sys.argv) < 1:
+    if len(sys.argv) > 1:
         date_str = sys.argv[1]
 
         try:
-            to_datetime(date_str, format='%d-%m-%Y')
+            to_datetime(date_str, format='%Y-%m-%d')
             logging.info(f'Date {date_str} is valid. Starting data processing...')
         except ValueError:
-            logging.error(f'Invalid date format: {date_str}. Please use "dd-mm-yyyy".')
+            logging.error(f'Invalid date format: {date_str}. Please use "yyyy-mm-dd".')
             sys.exit(1)
 
-        main(execution_date=date_str)
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+        formatted_execution_date = date_obj.strftime('%d-%m-%Y')
+        main(execution_date=formatted_execution_date)
 
     else:
-        logging.error('Execution date is required as a command line argument. Enter date in format "dd-mm-yyyy".')
+        logging.error('Execution date is required as a command line argument. Enter date in format "yyyy-mm-dd".')
         sys.exit(1)
 
 

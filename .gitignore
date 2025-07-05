@@ -183,3 +183,6 @@ plugins/
 config/
 unittests.cfg
 airflow.db
+
+# SQL
+*.sql
