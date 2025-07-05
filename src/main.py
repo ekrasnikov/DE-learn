@@ -1,4 +1,5 @@
 import logging
+import sys
 
 from sqlalchemy import create_engine
 from requests.exceptions import HTTPError
@@ -12,7 +13,7 @@ from http_client.coingecko_client import CoingeckoClient
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-def get_coingecko_market_chart(api_key: str) -> dict | None:
+def get_coingecko_history(api_key: str, execution_date: str) -> dict | None:
     """Работа с получением данных.
 
     Args:
@@ -23,13 +24,9 @@ def get_coingecko_market_chart(api_key: str) -> dict | None:
 
     """
     client = CoingeckoClient(api_key)
-    params = {
-        'days': 1,
-        'vs_currency': 'usd',
-    }
 
     try:
-        return client.fetch_market_chart('bitcoin', params)
+        return client.fetch_history('bitcoin', date=execution_date)
     except HTTPError as e:
         logging.error(f'Get data failed! :(. {e}')
         return None
@@ -38,7 +35,7 @@ def get_coingecko_market_chart(api_key: str) -> dict | None:
         return None
 
 
-def transform_market_chart_to_df(data: dict) -> DataFrame:
+def transform_history_market_data_to_df(data: dict, execution_date: str, currency: str = 'usd') -> DataFrame:
     """Трансформация полученных данных.
 
     Args:
@@ -48,18 +45,26 @@ def transform_market_chart_to_df(data: dict) -> DataFrame:
         Возвращает DataFrame  обработанных данных
 
     """
-    df_prices = DataFrame(data['prices'], columns=['datetime', 'price'])
-    df_caps = DataFrame(data['market_caps'], columns=['datetime', 'cap'])
-    df_volumes = DataFrame(data['total_volumes'], columns=['datetime', 'volume'])
+    market_data = data.get('market_data', {})
 
-    df = df_prices.merge(df_caps, on='datetime').merge(df_volumes, on='datetime')
+    if not market_data:
+        logging.error('No market data found in the response.')
+        return DataFrame()
 
-    df['datetime'] = to_datetime(df['datetime'], unit='ms')
-    df.set_index('datetime')
+    single_day_data = {
+        'price': market_data['current_price'][currency],
+        'market_cap': market_data['market_cap'][currency],
+        'total_volume': market_data['total_volume'][currency],
+    }
+
+    index_date = to_datetime(execution_date, format='%d-%m-%Y')
+    df = DataFrame([single_day_data], index=[index_date])
+    df.index.name = 'datetime'
 
     logging.info('Data has been transformed successfully!')
 
     return df.round(3)
+
 
 def save_dataframe_to_db(df: DataFrame, db_url: str, table_name: str) -> None:
     """Сохранение DataFrame в базу данных.
@@ -74,24 +79,48 @@ def save_dataframe_to_db(df: DataFrame, db_url: str, table_name: str) -> None:
     logging.info('Saving DataFrame to database...')
 
     engine = create_engine(db_url)
-    df.to_sql(table_name, con=engine, if_exists='replace', index=True, index_label='datetime')
+    df.to_sql(table_name, con=engine, if_exists='append', index=True, index_label='datetime')
 
     logging.info(f"Data successfully loaded to '{table_name}' table in PostgreSQL.")
 
 
-
-def main():
+def main(execution_date: str, currency: str = 'usd') -> None:
+    """Основная функция для запуска процесса получения и сохранения данных.
+    
+    Args:
+        execution_date - дата за которую нужно получить данные
+        currency - валюта, в которой нужно получить данные (по умолчанию 'usd')
+    """
     settings = Settings()
-    data = get_coingecko_market_chart(settings.api_key)
+    data = get_coingecko_history(settings.api_key, execution_date=execution_date)
 
     if not data:
         return
 
     logging.info('API Data has been received successfully!')
 
-    transformed_data = transform_market_chart_to_df(data)
-    save_dataframe_to_db(transformed_data, str(settings.database_url), 'market_chart')
+    transformed_data = transform_history_market_data_to_df(data, execution_date, currency)
+    save_dataframe_to_db(transformed_data, str(settings.database_url), 'history_market_data')
+
+
+def run_from_cli() -> None:
+    """Запуск скрипта из командной строки."""
+    if len(sys.argv) < 1:
+        date_str = sys.argv[1]
+
+        try:
+            to_datetime(date_str, format='%d-%m-%Y')
+            logging.info(f'Date {date_str} is valid. Starting data processing...')
+        except ValueError:
+            logging.error(f'Invalid date format: {date_str}. Please use "dd-mm-yyyy".')
+            sys.exit(1)
+
+        main(execution_date=date_str)
+
+    else:
+        logging.error('Execution date is required as a command line argument. Enter date in format "dd-mm-yyyy".')
+        sys.exit(1)
 
 
 if __name__ == '__main__':
-    main()
+    run_from_cli()

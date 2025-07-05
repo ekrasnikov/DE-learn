@@ -175,3 +175,11 @@ data/
 
 # Jupyter
 *.ipynb
+
+
+# Airflow
+logs/
+plugins/
+config/
+unittests.cfg
+airflow.db

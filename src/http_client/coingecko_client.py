@@ -26,12 +26,12 @@ class CoingeckoClient:
         stop=stop_after_attempt(10),
         wait=wait_exponential(multiplier=1, min=5, max=60)
     )
-    def fetch_market_chart(self, coin_id: str, params: dict) -> dict:
+    def fetch_history(self, coin_id: str, date: str) -> dict:
         """Получение иторических данных market_chart.
 
         Args:
             coin_id - id криптовалюты, данные которой хотим получить
-            params - параметры для запроса
+            date - дата снэпшота в формате 'dd-mm-yyyy' или количество дней назад
 
         Returns:
             Данные от API в виде словаря.
@@ -40,8 +40,10 @@ class CoingeckoClient:
             requests.exceptions.HTTPError: Если API возвращает ошибку после всех попыток.
 
         """
-        url = f'{self.BASE_URL}/coins/{coin_id}/market_chart'
-        response = self.session.get(url, params=params)
+        url = f'{self.BASE_URL}/coins/{coin_id}/history'
+        response = self.session.get(url, params={
+            'date': date
+        })
         response.raise_for_status()
 
         return response.json()
