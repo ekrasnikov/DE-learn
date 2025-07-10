@@ -17,17 +17,15 @@ with DAG(
   default_args=default_args,
   tags=['data-learn', 'crypto'],
 ):
-  environment={
-      'API_KEY': '{{ var.value.api_key }}',
-      'DATABASE_URL': '{{ var.value.database_url }}',
-  }
-
-  DockerOperator(
+  run_etl_task = DockerOperator(
     task_id='run_etl',
     image='de-learn-app:latest',
     network_mode='de-learn_de_network',
     docker_url='unix://var/run/docker.sock',
-    environment=environment,
+    environment={
+      'API_KEY': '{{ var.value.api_key }}',
+      'DATABASE_URL': '{{ var.value.database_url }}',
+    },
     command=['python', 'src/main.py', '{{ ds }}'],
     auto_remove='force',
   )

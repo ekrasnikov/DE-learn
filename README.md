@@ -8,7 +8,7 @@ This project creates a snapshot pipeline to save daily data...
 ![Apache Airflow](https://img.shields.io/badge/Apache%20Airflow-017CEE.svg?logo=Apache-Airflow&logoColor=white)
 ![Docker](https://img.shields.io/badge/docker-%232496ED.svg?logo=docker&logoColor=white)
 ![Docker Compose](https://img.shields.io/badge/docker_compose-2496ED?logo=docker&logoColor=white)
-![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?logo=postgresql&logoColor=white)
+![ClickHouse](https://img.shields.io/badge/ClickHouse-%23FFDD00.svg?logo=ClickHouse&logoColor=black)
 ![Pandas](https://img.shields.io/badge/pandas-%23150458.svg?logo=pandas&logoColor=white)
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-red)
 
@@ -50,7 +50,7 @@ The environment consists of two parts: the target database and the Airflow infra
 
 1. **Run the target database (DWH):**
   ```sh
-  docker-compose -f database-compose.yml up -d
+  docker-compose -f dwh-compose.yml up -d
   ```
 
 2. **Run the Airflow Infrastructure:**
@@ -65,10 +65,10 @@ The environment consists of two parts: the target database and the Airflow infra
 2. Log in using: **login:** `airflow`, **password:** `airflow`.
 3. In the DAGs list, find the DAG with ID `market_data_etl` and activate it by toggling the switch on the left.
 4. To trigger the DAG manually, click the **▶️ (Play)** button and select "Trigger DAG". 
-5. To check the result, connect to your target PostgreSQL database (port 5432) and run the query:
+5. To check the result, connect to your target ClickHouse database (port 8123) and run the query:
 
 ```sql
-SELECT * FROM history_market_data ORDER BY datetime DESC LIMIT 10;
+SELECT * FROM history_market_data LIMIT 10;
 ```
 
 
@@ -81,6 +81,6 @@ To stop and remove all containers:
   docker-compose down
 
   # Stop the target database
-  docker-compose -f database-compose.yml down
+  docker-compose -f dwh-compose.yml down
 ```
 

@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from pydantic import PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,4 +14,4 @@ class Settings(BaseSettings):
     )
 
     api_key: str
-    database_url: PostgresDsn
+    database_url: str

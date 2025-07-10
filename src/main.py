@@ -2,7 +2,7 @@ from datetime import datetime
 import logging
 import sys
 
-from sqlalchemy import create_engine
+import clickhouse_connect
 from requests.exceptions import HTTPError
 from pandas import DataFrame
 from pandas import to_datetime
@@ -60,11 +60,14 @@ def transform_history_market_data_to_df(data: dict, execution_date: str, currenc
 
     index_date = to_datetime(execution_date, format='%d-%m-%Y')
     df = DataFrame([single_day_data], index=[index_date])
+    df['price'] = (df['price'] * 100).round(0).astype('Int64')
+    df['market_cap'] = (df['market_cap'] * 100).round(0).astype('Int64')
+    df['total_volume'] = (df['total_volume'] * 100).round(0).astype('Int64')
     df.index.name = 'datetime'
 
     logging.info('Data has been transformed successfully!')
 
-    return df.round(3)
+    return df
 
 
 def save_dataframe_to_db(df: DataFrame, db_url: str, table_name: str) -> None:
@@ -77,12 +80,30 @@ def save_dataframe_to_db(df: DataFrame, db_url: str, table_name: str) -> None:
 
     """
 
+    if df.empty:
+        logging.info('DataFrame is empty. Skipping database insertion.')
+        return
+
     logging.info('Saving DataFrame to database...')
 
-    engine = create_engine(db_url)
-    df.to_sql(table_name, con=engine, if_exists='append', index=True, index_label='datetime')
+    client = clickhouse_connect.get_client(dsn=db_url)
 
-    logging.info(f"Data successfully loaded to '{table_name}' table in PostgreSQL.")
+    client.command(f"""
+        CREATE TABLE IF NOT EXISTS {table_name} (
+            datetime Date,
+            price UInt64,
+            market_cap UInt64,
+            total_volume UInt64
+        )
+        ENGINE = MergeTree()
+        PARTITION BY toYYYYMM(datetime)
+        ORDER BY (datetime)
+    """)
+
+    df_to_insert = df.reset_index()
+    client.insert_df(table_name, df_to_insert)
+
+    logging.info(f"Data successfully loaded to '{table_name}' table in ClickHouse.")
 
 
 def main(execution_date: str, currency: str = 'usd') -> None:
